@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.27130.2003
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ElecFlow", "ElecFlow\ElecFlow.csproj", "{A1F53685-DBC5-48FC-B842-7FC2E2291DDE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ElecFlow.Cli", "..\ElecFlow.Cli\ElecFlow.Cli.csproj", "{D390D80D-F5DF-47F3-9553-7408B734AA9E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{A1F53685-DBC5-48FC-B842-7FC2E2291DDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1F53685-DBC5-48FC-B842-7FC2E2291DDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1F53685-DBC5-48FC-B842-7FC2E2291DDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D390D80D-F5DF-47F3-9553-7408B734AA9E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D390D80D-F5DF-47F3-9553-7408B734AA9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D390D80D-F5DF-47F3-9553-7408B734AA9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D390D80D-F5DF-47F3-9553-7408B734AA9E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

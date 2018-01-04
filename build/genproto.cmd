@@ -1,0 +1,1 @@
+protoc --csharp_out=./ --csharp_opt=internal_access onnx.proto3
