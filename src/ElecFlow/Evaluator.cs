@@ -7,19 +7,21 @@ using ElecFlow.Layers;
 
 namespace ElecFlow
 {
-    public class Evaluator<T>
+    internal class Evaluator
     {
-        private readonly OutputConnector<T> _output;
+        private readonly OutputConnector _output;
+
+        public OutputConnector Output => _output;
 
         public IReadOnlyList<Layer> InputVariables { get; }
 
-        public Evaluator(OutputConnector<T> output)
+        public Evaluator(OutputConnector output)
         {
             _output = output;
             InputVariables = FindInputVariables();
         }
 
-        public Tensor<T> Evaluate(object inputs)
+        public object Evaluate(object inputs)
         {
             IReadOnlyDictionary<string, object> ConvertToContext()
             {
@@ -39,54 +41,56 @@ namespace ElecFlow
             return Evaluate(ConvertToContext());
         }
 
-        public Tensor<T> Evaluate(IReadOnlyDictionary<string, object> inputs)
+        public object Evaluate(IReadOnlyDictionary<string, object> inputs)
         {
             var deferReset = new List<InputConnector>();
-            var evaluateQueue = new Queue<Layer>();
-            var evaluateLayers = new HashSet<Layer>();
+            var evaluateStack = new Stack<Layer>();
+            var evaluatedLayers = new HashSet<Layer>();
 
-            void OfferValue(Layer node)
+            void EvaluateTop()
             {
-                if (node.Inputs.Values.Any(o => o.CurrentValue == null)) return;
-
-                foreach (var output in node.Outputs.Values)
+                var node = evaluateStack.Peek();
+                if (node.Inputs.Values.All(o => o.CurrentValue != null))
                 {
-                    var outValue = output.Evaluate(inputs);
-                    var connections = output.Connections;
-                    for (int i = 0; i < connections.Count; i++)
+                    if (!evaluatedLayers.Add(node)) return;
+
+                    foreach (var output in node.Outputs.Values)
                     {
-                        var to = connections[i].To;
-                        if (i == connections.Count - 1)
-                            to.SetCurrentValue(outValue);
-                        else
-                            to.SetCurrentValue(output.CloneOutputValue(outValue));
-                        deferReset.Add(to);
+                        var outValue = output.Evaluate(inputs);
+                        var connections = output.Connections;
+                        for (int i = 0; i < connections.Count; i++)
+                        {
+                            var to = connections[i].To;
+                            if (i == connections.Count - 1)
+                                to.SetCurrentValue(outValue);
+                            else
+                                to.SetCurrentValue(output.CloneOutputValue(outValue));
+                            deferReset.Add(to);
+                        }
+                    }
+
+                    evaluateStack.Pop();
+                }
+                else
+                {
+                    foreach (var input in node.Inputs.Values.Where(o => o.CurrentValue == null))
+                    {
+                        var sourceNode = input.Connection.From.Owner;
+                        evaluateStack.Push(sourceNode);
                     }
                 }
-
-                foreach (var output in node.Outputs.Values)
-                {
-                    foreach (var conn in output.Connections)
-                    {
-                        var layer = conn.To.Owner;
-                        if (evaluateLayers.Add(layer))
-                            evaluateQueue.Enqueue(layer);
-                    }
-                }
-            }
-
-            foreach (var inputVar in InputVariables)
-            {
-                evaluateQueue.Enqueue(inputVar);
-                evaluateLayers.Add(inputVar);
             }
 
             try
             {
-                while (evaluateQueue.Count != 0)
+                foreach (var input in _output.Owner.Inputs.Values)
                 {
-                    OfferValue(evaluateQueue.Dequeue());
+                    var sourceNode = input.Connection.From.Owner;
+                    evaluateStack.Push(sourceNode);
                 }
+
+                while (evaluateStack.Count != 0)
+                    EvaluateTop();
 
                 return _output.Evaluate(inputs);
             }

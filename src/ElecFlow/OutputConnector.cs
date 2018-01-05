@@ -21,9 +21,9 @@ namespace ElecFlow
 
         protected abstract object EvaluateCore(IReadOnlyDictionary<string, object> evaluationContext);
 
-        public void Connect(InputConnector to) => ConnectCore(to);
+        public Connection Connect(InputConnector to) => ConnectCore(to);
 
-        protected abstract void ConnectCore(InputConnector to);
+        protected abstract Connection ConnectCore(InputConnector to);
 
         public void Disconnect(InputConnector to)
         {
@@ -50,17 +50,20 @@ namespace ElecFlow
 
         public new Tensor<T> Evaluate(IReadOnlyDictionary<string, object> evaluationContext) => _evaluator(evaluationContext);
 
-        protected override void ConnectCore(InputConnector to) => Connect((InputConnector<T>)to);
+        protected override Connection ConnectCore(InputConnector to) => Connect((InputConnector<T>)to);
 
-        public void Connect(InputConnector<T> to)
+        public Connection Connect(InputConnector<T> to)
         {
-            if (!Connections.Any(o => o.To == to))
+            var connection = Connections.SingleOrDefault(o => o.To == to);
+            if (connection == null)
             {
                 to.Disconnect();
-                var connection = new Connection(this, to);
+                connection = new Connection(this, to);
                 MutableConnections.Add(connection);
                 to.Connection = connection;
             }
+
+            return connection;
         }
 
         internal override object CloneOutputValue(object value) => ((Tensor<T>)value).Clone();

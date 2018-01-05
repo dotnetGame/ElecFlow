@@ -9,26 +9,35 @@ namespace ElecFlow
 {
     public class FlowGraph
     {
-        private readonly ModelProto _onnxModel;
-        private readonly IReadOnlyCollection<ValueInfoProto> _inputsNoInit;
-        private readonly IReadOnlyCollection<ValueInfoProto> _outputs;
+        private readonly OutputConnector _output;
+        private readonly Evaluator _evaluator;
 
-        internal FlowGraph(ModelProto modelProto)
+        public IReadOnlyList<Layer> Layers { get; }
+
+        internal FlowGraph(OutputConnector output)
         {
-            _onnxModel = modelProto;
-            _inputsNoInit = FindInputsNoInit();
-            _outputs = modelProto.Graph.Output;
+            _output = output;
+            _evaluator = new Evaluator(output);
+            Layers = FindLayers();
         }
 
-        private IReadOnlyCollection<ValueInfoProto> FindInputsNoInit()
+        private IReadOnlyList<Layer> FindLayers()
         {
-            var init = _onnxModel.Graph.Initializer;
-            return _onnxModel.Graph.Input.Where(o => !init.Any(i => i.Name == o.Name)).ToList();
+            var layers = new HashSet<Layer>();
+
+            void FindLayers(Layer root)
+            {
+                layers.Add(root);
+                foreach (var input in root.Inputs.Values)
+                    FindLayers(input.Connection.From.Owner);
+            }
+
+            FindLayers(_output.Owner);
+            return layers.ToList();
         }
 
-        public static FlowGraph Load(Stream input)
-        {
-            return new FlowGraph(ModelProto.Parser.ParseFrom(input));
-        }
+        public object Evaluate(object inputs) => _evaluator.Evaluate(inputs);
+
+        public static FlowGraph From(OutputConnector output) => new FlowGraph(output);
     }
 }
