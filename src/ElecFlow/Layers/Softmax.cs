@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ElecFlow.Layers
 {
-    public class Softmax
+    public class Softmax : Layer
     {
     }
 }

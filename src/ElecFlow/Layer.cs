@@ -5,74 +5,34 @@ using System.Text;
 
 namespace ElecFlow
 {
-    public abstract class Layer
+    public abstract partial class Layer
     {
-        private bool _isDirty = true;
+        private readonly Dictionary<string, InputConnector> _inputConnectors = new Dictionary<string, InputConnector>();
+        private readonly Dictionary<string, OutputConnector> _outputConnectors = new Dictionary<string, OutputConnector>();
 
-        private readonly List<Tensor<double>> _inputTensors = new List<Tensor<double>>();
-        private readonly List<int[]> _inputDimensions = new List<int[]>();
+        public IReadOnlyDictionary<string, InputConnector> Inputs => _inputConnectors;
 
-        private readonly List<Tensor<double>> _outputTensors = new List<Tensor<double>>();
-        private readonly List<int[]> _outputDimensions = new List<int[]>();
+        public IReadOnlyDictionary<string, OutputConnector> Outputs => _outputConnectors;
 
-        protected void AddInputConnector(ReadOnlySpan<int> dimensions)
+        public string Name { get; set; }
+
+        public Layer(string name = null)
         {
-            _inputDimensions.Add(dimensions.ToArray());
-            _inputTensors.Add(null);
+            Name = name ?? GetType().ToString();
         }
 
-        protected void AddOutputConnector(ReadOnlySpan<int> dimensions)
+        protected InputConnector<T> AddInputConnector<T>(string name, ReadOnlySpan<int> dimensions)
         {
-            _outputDimensions.Add(dimensions.ToArray());
-            _outputTensors.Add(null);
+            var input = new InputConnector<T>(this, name, dimensions);
+            _inputConnectors.Add(name, input);
+            return input;
         }
 
-        public void OfferInput(int index, Tensor<double> input)
+        protected OutputConnector<T> AddOutputConnector<T>(string name, ReadOnlySpan<int> dimensions, Func<IReadOnlyDictionary<string, object>, Tensor<T>> evaluator)
         {
-            if (index < 0 || index >= _inputTensors.Count)
-                throw new ArgumentOutOfRangeException(nameof(index));
-
-            _inputTensors[index] = CheckAndClone(input, _inputDimensions[index]);
-            _isDirty = true;
-        }
-
-        public Tensor<double> GetInput(int index)
-        {
-            if (index < 0 || index >= _inputTensors.Count)
-                throw new ArgumentOutOfRangeException(nameof(index));
-            return _inputTensors[index];
-        }
-
-        public Tensor<double> ProvideOutput(int index)
-        {
-            if (index < 0 || index >= _outputTensors.Count)
-                throw new ArgumentOutOfRangeException(nameof(index));
-
-            if (_isDirty)
-            {
-                CaculateOutputs();
-                _isDirty = false;
-            }
-
-            return _outputTensors[index];
-        }
-
-        protected void SetOutput(int index, Tensor<double> value)
-        {
-            if (!value.Dimensions.SequenceEqual(_outputDimensions[index]))
-                throw new ArgumentException("Dimensions is not same.");
-            _outputTensors[index] = value;
-        }
-
-        public ReadOnlySpan<int> GetOutputDimension(int index) => _outputDimensions[index];
-
-        protected abstract void CaculateOutputs();
-
-        protected static Tensor<double> CheckAndClone(Tensor<double> source, ReadOnlySpan<int> dimensions)
-        {
-            if (!source.Dimensions.SequenceEqual(dimensions))
-                throw new ArgumentException("Dimensions is not same.");
-            return source.Clone();
+            var output = new OutputConnector<T>(this, name, dimensions, evaluator);
+            _outputConnectors.Add(name, output);
+            return output;
         }
     }
 }

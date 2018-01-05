@@ -7,36 +7,43 @@ namespace ElecFlow.Layers
 {
     public class MatMul : Layer
     {
-        public Tensor<double> A
-        {
-            get => GetInput(0);
-            set => OfferInput(0, value);
-        }
+        public InputConnector<double> A { get; }
 
-        public Tensor<double> B
-        {
-            get => GetInput(1);
-            set => OfferInput(1, value);
-        }
+        public InputConnector<double> B { get; }
 
-        public Tensor<double> Y
-        {
-            get => ProvideOutput(0);
-            private set => SetOutput(0, value);
-        }
+        public OutputConnector<double> Y { get; }
 
         public MatMul(ReadOnlySpan<int> aDim, ReadOnlySpan<int> bDim)
         {
             if (aDim.Length != bDim.Length) throw new ArgumentException("Dimensions of A and B must be same.");
 
-            AddInputConnector(aDim);
-            AddInputConnector(bDim);
-            AddOutputConnector(new DenseTensor<double>(aDim).MatrixMultiply(new DenseTensor<double>(bDim)).Dimensions);
+            A = AddInputConnector<double>("A", aDim);
+            B = AddInputConnector<double>("B", bDim);
+            Y = AddOutputConnector("Y", new DenseTensor<double>(aDim).MatrixMultiply(new DenseTensor<double>(bDim)).Dimensions, OnEvaluateY);
         }
 
-        protected override void CaculateOutputs()
+        private Tensor<double> OnEvaluateY(IReadOnlyDictionary<string, object> evaluationContext)
         {
-            Y = A.MatrixMultiply(B);
+            return A.CurrentValue.MatrixMultiply(B.CurrentValue);
+        }
+    }
+}
+
+namespace ElecFlow
+{
+    using System.Linq;
+    using ElecFlow.Layers;
+
+    public partial class Layer
+    {
+        public static MatMul MatMul(Layer left, Layer right)
+        {
+            var leftOutput = left.Outputs.First().Value;
+            var rightOutput = right.Outputs.First().Value;
+            var node = new MatMul(leftOutput.Dimensions, rightOutput.Dimensions);
+            leftOutput.Connect(node.A);
+            rightOutput.Connect(node.B);
+            return node;
         }
     }
 }

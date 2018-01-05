@@ -7,23 +7,11 @@ namespace ElecFlow.Layers
 {
     public class Add : Layer
     {
-        public Tensor<double> A
-        {
-            get => GetInput(0);
-            set => OfferInput(0, value);
-        }
+        public InputConnector<double> A { get; }
 
-        public Tensor<double> B
-        {
-            get => GetInput(1);
-            set => OfferInput(1, value);
-        }
+        public InputConnector<double> B { get; }
 
-        public Tensor<double> Y
-        {
-            get => ProvideOutput(0);
-            private set => SetOutput(0, value);
-        }
+        public OutputConnector<double> Y { get; }
 
         private readonly int _broadcast;
         private readonly int _axis;
@@ -34,20 +22,20 @@ namespace ElecFlow.Layers
 
             _broadcast = broadcast;
             _axis = axis ?? aDim.Length - bDim.Length;
-            AddInputConnector(aDim);
-            AddInputConnector(bDim);
-            AddOutputConnector(aDim);
+            A = AddInputConnector<double>("A", aDim);
+            B = AddInputConnector<double>("B", bDim);
+            Y = AddOutputConnector("Y", aDim, OnEvaluateY);
         }
 
-        protected override void CaculateOutputs()
+        private Tensor<double> OnEvaluateY(IReadOnlyDictionary<string, object> evaluationContext)
         {
             if (_broadcast == 0 || A.Dimensions.SequenceEqual(B.Dimensions))
             {
-                Y = Tensor.Add(A, B);
+                return Tensor.Add(A.CurrentValue, B.CurrentValue);
             }
             else
             {
-                var y = A.CloneEmpty();
+                var y = A.CurrentValue.CloneEmpty();
                 var axis = _axis;
                 var ranges = new Range[A.Dimensions.Length];
                 for (int i = 0; i < B.Dimensions.Length; i++)
@@ -57,12 +45,33 @@ namespace ElecFlow.Layers
                 for (int i = 0; i < A.Dimensions[0]; i++)
                 {
                     ranges[0] = new Range(i, 1);
-                    var src = A.Slice(ranges);
-                    Tensor.Add(src, B, y.Slice(ranges));
+                    var src = A.CurrentValue.Slice(ranges);
+                    Tensor.Add(src, B.CurrentValue, y.Slice(ranges));
                 }
 
-                Y = y;
+                return y;
             }
         }
+    }
+}
+
+namespace ElecFlow
+{
+    using System.Linq;
+    using ElecFlow.Layers;
+
+    public partial class Layer
+    {
+        public static Add Add(Layer left, Layer right, int broadcast = 1, int? axis = null)
+        {
+            var leftOutput = left.Outputs.First().Value;
+            var rightOutput = right.Outputs.First().Value;
+            var node = new Add(leftOutput.Dimensions, rightOutput.Dimensions, broadcast, axis);
+            leftOutput.Connect(node.A);
+            rightOutput.Connect(node.B);
+            return node;
+        }
+
+        public static Add operator +(Layer left, Layer right) => Add(left, right);
     }
 }
