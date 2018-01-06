@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
+using System.Threading.Tasks;
+using ElecFlow.CodeGeneration;
 
 namespace ElecFlow
 {
@@ -34,5 +36,7 @@ namespace ElecFlow
             _outputConnectors.Add(name, output);
             return output;
         }
+
+        internal virtual Task GenerateHDLAsync(VerilogCodeGenContext context) => Task.CompletedTask;
     }
 }

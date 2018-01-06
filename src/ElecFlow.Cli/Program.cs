@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
 using ElecFlow.IO;
 using ElecFlow.Layers;
 
@@ -10,7 +11,7 @@ namespace ElecFlow.Cli
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             //var arrA = new DenseTensor<double>(new[] { 1.0, 2, 3, 4, 5, 6 }, new[] { 2, 3 });
             //var arrB = new DenseTensor<double>(new[] { 1.0, 4, 2, 5, 3, 6 }, new[] { 3, 2 });
@@ -64,8 +65,8 @@ namespace ElecFlow.Cli
                 var max = output.Select((o, idx) => new { Index = idx, Value = o }).OrderByDescending(o => o.Value).First().Index;
                 Console.Write($"{max}, ");
             }
-
-            Console.Read();
+            Directory.CreateDirectory("bin/output");
+            await graph.GenerateHDLAsync("bin/output");
         }
     }
 }

@@ -30,5 +30,10 @@ namespace ElecFlow
             if (other.ValueType != ValueType || !other._dimensions.SequenceEqual(_dimensions))
                 throw new InvalidOperationException("Value type and dimensions must be same.");
         }
+
+        internal string GetTypeName()
+        {
+            return ValueType.Name + "_Dim_" + string.Join("_", _dimensions);
+        }
     }
 }

@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
+using ElecFlow.CodeGeneration;
 using Onnx;
+using RazorLight;
+using RazorLight.Razor;
 
 namespace ElecFlow
 {
@@ -37,6 +41,17 @@ namespace ElecFlow
         }
 
         public object Evaluate(object inputs) => _evaluator.Evaluate(inputs);
+
+        public async Task GenerateHDLAsync(string outputDirectory)
+        {
+            var engine = new RazorLightEngineBuilder()
+             .UseProject(new EmbeddedRazorProject(typeof(FlowGraph)) { Extension = ".v" })
+             .UseMemoryCachingProvider()
+             .Build();
+            var context = new VerilogCodeGenContext(engine, outputDirectory);
+            foreach (var layer in Layers)
+                await layer.GenerateHDLAsync(context);
+        }
 
         public static FlowGraph From(OutputConnector output) => new FlowGraph(output);
     }
